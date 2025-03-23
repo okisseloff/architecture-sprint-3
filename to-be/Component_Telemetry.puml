@@ -1,0 +1,49 @@
+@startuml
+title WarmHouse Telemetry MS Component Diagram
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Component(apigw, "API Gateway", "", "Распределённый API Gateway")
+Component(telemetrygw, "Telemetry Gateway", "", "Распределённый Telemetry Gateway")
+
+Container_Boundary(telemetry_ms_container, "Telemetry Microservice") {
+    Component(user_interaction_controller, "User Interaction Controller", "", "Обеспечивает взаимодействие с пользователем")
+    Component(device_interaction_controller, "Device Interaction Controller", "", "Обеспечивает взаимодействие с устройствами")
+    Component(device_protocol_adapter, "Device Protocol Adapter", "", "Обеспечивает в обе стороны адаптацию протокола взаимодействия с устройством")
+    Component(controller, "Device Controller", "", "Управляет устройствами и обрабатывает телеметрию")
+    Component(service, "Device Service", "", "Обеспечивает взаимодействие с СУБД и брокером сообщений")
+
+    Rel(apigw, user_interaction_controller, "Передаёт запросы от пользователя")
+    Rel(user_interaction_controller, controller, "Отдаёт команды")
+    Rel(controller, user_interaction_controller, "Получает необходимые данные телеметрии")
+    Rel(device_interaction_controller, controller, "Обновляет данные телеметрии")
+    Rel(controller, device_interaction_controller, "Посылает команды")
+    Rel(device_protocol_adapter, device_interaction_controller, "Преобразует данные в формат системы")
+    Rel(device_interaction_controller, device_protocol_adapter, "Преобразует данные в формат устройства")
+    Rel(telemetrygw, device_protocol_adapter, "Передает запросы устройства")
+    Rel(device_protocol_adapter, telemetrygw, "Отсылает команды устройству")
+
+    Rel(controller, service, "Обновляет данные устройства")
+    Rel(service, controller, "Посылает устройству команды")
+}
+
+Container_Boundary(device_ms_container, "Devices Microservice") {
+    Component_Ext(deviceapi, "REST API", "HTTP/gRPC", "Информация об устройствах")
+}
+Rel(telemetrygw, deviceapi, "Авторизует устройство")
+
+Component_Ext(device, "User Device", "", "Устройство пользователя")
+Rel(device, telemetrygw, "Отсылает состояние")
+Rel(telemetrygw, device, "Слушает команды")
+Rel(device_protocol_adapter, deviceapi, "Получение информации о протоколах устройства")
+
+ComponentDb(db, "Database", "MongoDB", "Хранит историю состояний устройств и выданных команд")
+Rel(service, db, "Получает/Сохраняет данные телеметрии")
+
+Container_Ext(mb, "Message Broker", "Kafka/RabbitMQ", "Обмен сообщениями между микросервисами")
+Rel(service, mb, "Оповещает об изменении статуса устройства")
+Rel(mb, service, "Получает команды на исполнение на устройствах")
+
+@enduml

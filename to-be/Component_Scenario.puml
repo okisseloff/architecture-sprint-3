@@ -1,0 +1,41 @@
+@startuml
+title WarmHouse Scenario MS Component Diagram
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Component(apigw, "API Gateway", "", "Распределённый API Gateway")
+
+Container_Boundary(scenario_ms_container, "Scenario Microservice") {
+    Component(controller, "Scenario Controller", "", "Управляет процессом модификации и исполнения сценариев")
+    Component(service, "Scenario Service", "", "Обеспечивает взаимодействие с СУБД и брокером сообщений")
+    Component(scheduler, "Trigger Scheduler", "", "Отслеживает моменты срабатывания триггеров")
+    Component(executor, "Scenario Executor", "", "Исполняет сценарии")
+
+    Rel(apigw, controller, "Передаёт запросы от пользователя")
+    Rel(controller, executor, "Управляет сценариями, требующих исполнения")
+    Rel(controller, service, "Управляет процессом хранения сценариев")
+    Rel(executor, scheduler, "Управляет набором отслеживаемых триггеров")
+    Rel(executor, service, "Исполняет действие")
+}
+
+Container_Boundary(device_ms_container, "Devices Microservice") {
+    Component_Ext(deviceapi, "REST API", "", "Информация об устройствах и шаблонах команд")
+}
+
+Container_Boundary(user_ms_container, "Users and Properties Microservice") {
+    Component_Ext(userapi, "REST API", "", "Информация о пользователях и объектах недвижимости")
+}
+
+
+Rel(controller, deviceapi, "Получение информации об устройствах и шаблонах команд")
+Rel(controller, userapi, "Получение информации о пользователях и объектах недвижимости")
+
+ComponentDb(db, "Database", "PostgreSQL", "Хранит информацию о сценариях, триггерах и действиях, связанных с триггерами")
+Rel(service, db, "Получает/Сохраняет данные о сценариях")
+
+Container_Ext(mb, "Message Broker", "Kafka/RabbitMQ", "Обмен сообщениями между микросервисами")
+Rel(service, mb, "Оповещает о необходимости выполнить команду на устройстве или о необходимости оповестить пользователя")
+
+@enduml
