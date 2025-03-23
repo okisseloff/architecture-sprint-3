@@ -1,0 +1,199 @@
+@startuml
+
+rectangle "User Management" {
+    entity Property {
+        * id: int <<PK>>
+        --
+        * name: string
+        address: string
+        location: string
+        description: text
+    }
+
+    entity User #lightblue {
+      * id: int <<PK>>
+      --
+      * name: string
+      * email: string
+      * phone_number: string
+      * registered: date
+      subscription_ends: date
+    }
+
+    note left of User
+        Пользователь системы.
+        Может иметь дату окончания подписки.
+    end note
+
+    entity UsersProperties {
+        * user_id: int <<FK>>
+        * property_id: int <<FK>>
+        * role: string
+    }
+
+    note bottom of UsersProperties
+        Реализует связь много ко многим для User и Property.
+        Доступные роли: owner, resident
+    end note
+
+    User::id ||--o{ UsersProperties::user_id : owns
+    Property::id ||--o{ UsersProperties::property_id : operated by
+}
+
+rectangle "Device Management" {
+    entity Device #lightgreen {
+        * id: int <<PK>>
+        * property_id: int <<FK>>
+        --
+        * type: string
+        * online: boolean
+        vendor_id: string
+        protocol: string
+    }
+
+    note left of Device
+        Доступные типы:
+        sensor, light, switch, climate, camera, lock, button
+        Протокол указывается, если с устройством необходимо
+        взаимодействовать особым образом или же
+        если для взаимодействия с устройством
+        необходимо преобразовывать данные в альтернативный формат
+    end note
+
+    entity CommandTemplate {
+        * id: int <<PK>>
+        --
+        * device_type: string
+        * value: string
+        description: text
+    }
+
+    note right of CommandTemplate
+        Для каждого из типов устройств содержит
+        шаблоны доступных команд
+    end note
+}
+
+rectangle "Device Operation (Telemetry)" {
+    entity DeviceState {
+        * device_id: int <<FK>>
+        * set_at: timestamp
+        * value: string
+    }
+
+    note bottom of DeviceState
+      Состояние, пришедшее от устройства
+    end note
+
+    entity Command {
+        * device_id: int <<FK>>
+        * issued_at: timestamp
+        * issued_by: string
+        * value: string
+    }
+
+    note bottom of Command
+      Команда, данная устройству
+      issued_by определяет тип инициатора
+    end note
+}
+
+Device::id ||--o{ DeviceState::device_id: has history of
+Device::id ||--o{ Command::device_id: has history of
+
+Property::id ||--o{ Device::property_id : contains
+
+rectangle "User Scenarios" {
+    entity Scenario #lightpink {
+        * id: int <<PK>>
+        * property_id: int <<FK>>
+        * trigger_id: int <<FK>>
+        --
+        name: string
+        last_run: timestamp
+    }
+
+    Property::id ||--o{ Scenario::user_id : manages
+
+    note left of Scenario
+      Описывает простейший сценарий.
+    end note
+
+    entity ComplexScenario {
+        * id: int <<PK>>
+        * propety_id: int <<FK>>
+        * type: string
+        * triggers_ids:
+        --
+        name: string
+        last_run: timestamp
+    }
+
+    note left of ComplexScenario
+          Описывает многоактный сценарий.
+          Для данной реализации вне фокуса.
+          В зависимости от типа (sequence, parallel)
+          исполняет сценарии последовательно или в параллели
+          для триггеров из списка triggers_ids
+    end note
+
+    entity Trigger {
+        * id: int <<PK>>
+        * action_id: int <<FK>>
+        --
+        * type: string
+        * value
+        name: string
+        last_triggered_at: timestamp
+    }
+
+    Scenario::trigger_id ||--|| Trigger::id : contains
+
+    note left of Trigger
+      Описывает событие, при наступлении которого выполняется действие.
+      Доступные типы: condition, timer, interval
+      value содержит типозависимые параметры, например
+      { "timeout": 0 } или { "device.bedroom.table_button": { "event": "pressed" } }
+    end note
+
+    entity Action {
+        * id: int <<PK>>
+        * device_id: int <<FK>>
+        --
+        * type: string
+        * content: string
+        name: string
+    }
+
+    note left of Action
+        Действие - минимальный исполняемый
+        атомарный элемент сценария
+        Доступные типы: command, notification
+        Поле content содержит разрешённую на базе
+        шаблона команды устройства строку
+        или же информацию о реципиентах
+    end note
+
+    Trigger::action_id ||--|| Action::id : triggers
+    Device::id ||--o{ Action::device_id : could be controlled by
+}
+
+rectangle Notifications {
+    entity Notification {
+        * id : int <<PK>>
+        * user_id: int <<FK>>
+        --
+        * type: string
+        * content: text
+        sent_at: timestamp
+        delivered_at: timestamp
+    }
+
+    note bottom of Notification
+      Типы оповещений: email, sms, push, inbox
+    end note
+
+    User::id ||--o{ Notification::user_id: has
+}
+
+@enduml
