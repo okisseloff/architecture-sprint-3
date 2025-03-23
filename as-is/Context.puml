@@ -1,0 +1,16 @@
+@startuml
+title WarmHouse Context Diagram
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "User", "Home automation system user")
+Person(support, "Support", "Support service team member")
+System(WarmHouseSystem, "WarmHouse System", "Device management, setting desired temperature, sensors data browsing")
+
+Rel(user, WarmHouseSystem, "Reads sensor data and sets desired temperature")
+Rel(support, WarmHouseSystem, "Registers user devices")
+Rel(support, user, "Provides support")
+
+@enduml
