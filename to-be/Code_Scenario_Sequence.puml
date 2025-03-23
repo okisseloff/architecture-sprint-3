@@ -1,0 +1,34 @@
+@startuml
+title WarmHouse Scenario Execution Sequence Diagram
+
+participant "Client" as C
+participant "ScenarioController" as Controller
+participant "ScenarioExecutor" as Executor
+participant "ScenarioService" as Service
+participant "TriggerScheduler" as Scheduler
+participant "ScenarioRepository" as sr
+participant "TriggerRepository" as tr
+participant "ActionRepository" as ar
+participant "MessageBrokerClient" as mb
+
+C -> Controller: executeScenario(id)
+Controller -> sr: findById(id)
+sr -> Controller: scenario
+Controller -> Executor: runScenario(scenario)
+Executor -> Controller: scenarioProcessingResult
+Controller -> C: scenarioProcessingResponse
+
+Executor -> tr: findById
+tr -> Executor: trigger
+Executor -> Scheduler: scheduleTrigger(trigger)
+...
+Scheduler -> Executor: onTriggeredEvent
+Executor -> ar: findById
+ar -> Executor: action
+Executor -> Service: notifyAction
+Service -> mb: publishEvent(action.command, action.parameters)
+Service -> ar: update(action)
+Service -> tr: update(trigger)
+Service -> sr: update(scenario)
+
+@enduml

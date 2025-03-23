@@ -1,0 +1,83 @@
+@startuml
+title WarmHouse Container Diagram
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+top to bottom direction
+
+Person(user, "Пользователь", "Взаимодействует с системой через Web приложение")
+Person(support, "Специалист техподдержки", "Использует Web портал технической поддержки")
+
+System_Boundary(system, "WarmHouse") {
+    Container(webapp, "Web приложение", "React/Angular", "Позволяет пользователю управлять устройствами и сценариями")
+    Container(support_portal, "Web портал поддержки", "React/Angular", "Интерфейс для технической поддержки")
+
+    Container_Boundary(services, "Микросервисы") {
+        Container(apigw, "API Gateway", "", "Распределённый API Gateway")
+
+        Container(auth, "Auth", "Spring Security", "Сервис авторизации")
+        ContainerDb(auth_db, "Auth DB", "MongoDB", "Хранение учетных данных")
+        Rel(auth, auth_db, "Читает/Записывает данные")
+
+        Container(users, "Users and Properties", "Spring Boot", "Управление пользователями и недвижимостью")
+        ContainerDb(users_db, "Users DB", "PostgreSQL", "Хранение данных о пользователях и недвижимости")
+        Rel(users, users_db, "Читает/Записывает данные")
+
+        Container(devices, "Devices", "Spring Boot", "Работа с устройствами и их командами")
+        ContainerDb(devices_db, "Devices DB", "PostgreSQL", "Хранение данных об устройствах")
+        Rel(devices, devices_db, "Читает/Записывает данные")
+
+        Container(scenarios, "Scenarios", "Spring Boot", "Создание автоматизационных сценариев")
+        ContainerDb(scenarios_db, "Scenarios DB", "PostgreSQL", "Хранение пользовательских сценариев")
+        Rel(scenarios, scenarios_db, "Читает/Записывает данные")
+
+        Container(telegw, "Telemetry Gateway", "HTTP/Websocket/MQTT/...", "Распределённый Telemetry Gateway")
+        Rel(telegw, devices_db, "Авторизация устройств")
+
+        Container(telemetry, "Telemetry", "Spring Boot", "Управление и связь с устройствами")
+        ContainerDb(telemetry_db, "Telemetry DB", "MongoDB", "Хранение телеметрических данных")
+        Rel(telemetry, telemetry_db, "Читает/Записывает данные")
+
+        Container(statistics, "Statistics", "Python", "Анализ и агрегирование данных устройств")
+        ContainerDb(statistics_db, "Statistics DB", "PostgreSQL", "Анализ данных")
+        Rel(statistics, statistics_db, "Читает/Записывает данные")
+
+        Container(notifications, "Notifications", "Spring Boot", "Отправка нотификаций")
+        ContainerDb(notifications_db, "Notifications DB", "MongoDB", "Хранение данных о нотификациях")
+        Rel(notifications, notifications_db, "Читает/Записывает данные")
+
+        Container(message_broker, "Message Broker", "Kafka/RabbitMQ", "Обмен сообщениями между микросервисами")
+
+        Rel(webapp, apigw, "Запросы")
+
+        Rel(apigw, auth, "Запросы на аутентификацию")
+        Rel(apigw, users, "Получение информации о пользователе и недвижимости")
+        Rel(apigw, devices, "Управление устройствами")
+        Rel(apigw, scenarios, "Создание сценариев автоматизации")
+        Rel(apigw, telemetry, "Команды устройству и получение данных")
+        Rel(telegw, telemetry, "Обмен телеметрией")
+        Rel(apigw, statistics, "Получает информацию о статистике для устройства")
+    }
+}
+
+System_Ext(email_gateway, "E-mail шлюз", "Отправка email уведомлений")
+System_Ext(sms_gateway, "SMS шлюз", "Отправка SMS сообщений")
+System_Ext(user_devices, "Устройства пользователей", "Физические устройства пользователей")
+
+Rel(user, webapp, "Взаимодействует через UI")
+Rel(support, support_portal, "Использует для техподдержки")
+Rel(support_portal, apigw, "Запросы")
+
+Rel(user_devices, telegw, "Обмен телеметрией")
+Rel(notifications, email_gateway, "Отправляет email")
+Rel(notifications, sms_gateway, "Отправляет SMS")
+
+Rel(auth, message_broker, "Публикует события аутентификации")
+Rel(users, message_broker, "Публикует/читает события пользователей")
+Rel(devices, message_broker, "Публикует/читает события устройств")
+Rel(scenarios, message_broker, "Публикует/читает события сценариев")
+Rel(telemetry, message_broker, "Публикует данные телеметрии")
+Rel(statistics, message_broker, "Потребляет события телеметрии")
+Rel(notifications, message_broker, "Потребляет события для уведомлений")
+
+@enduml

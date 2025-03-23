@@ -1,0 +1,97 @@
+@startuml
+title WarmHouse Scenario Management Class Diagram
+
+top to bottom direction
+
+class ScenarioController {
+    +createScenario(name: String, triggers: List<Trigger>, actions: List<Action>): Scenario
+    +editScenario(id: int, name: String, triggers: List<Trigger>, actions: List<Action>): Scenario
+    +executeScenario(id: int)
+    +start()
+    +shutdown()
+}
+
+class ScenarioExecutor {
+    +runScenario(scenario: Scenario)
+    +stopScenario(scenario: Scenario)
+    +updateScenario(scenario: Scenario)
+}
+
+class TriggerScheduler {
+    +scheduleTrigger(trigger: Trigger)
+    +cancelTrigger(trigger: Trigger)
+    +onTriggered(trigger: Trigger)
+}
+
+class ScenarioService {
+    +saveScenario(scenario: Scenario)
+    +updateScenario(scenario: Scenario)
+    +notifyAction(action: Action)
+}
+
+class Scenario {
+    +id: int
+    +property_id: int
+    +name: String
+    +triggers: List<Trigger>
+    +actions: List<Action>
+}
+
+class Trigger {
+    +id: int
+    +type: String
+    +parameters: Map<String, String>
+    +checkCondition(): boolean
+}
+
+class Action {
+    +id: int
+    +type: String
+    +command: String
+    +parameters: Map<String, String>
+    +execute()
+}
+
+class ScenarioRepository {
+    +store(scenario: Scenario)
+    +findById(id: int): Scenario
+    +update(scenario: Scenario)
+    +delete(id: int)
+}
+
+class TriggerRepository {
+    +store(trigger: Trigger)
+    +findById(id: int): Trigger
+    +update(trigger: Trigger)
+    +delete(id: int)
+}
+
+class ActionRepository {
+    +store(action: Action)
+    +findById(id: int): Action
+    +update(action: Action)
+    +delete(id: int)
+}
+
+class MessageBrokerClient {
+    +publishEvent(event: String, data: Map<String, String>)
+    +subscribe(event: String, handler: Function)
+}
+
+ScenarioController -. ScenarioService
+ScenarioController -. ScenarioExecutor
+ScenarioService -. ScenarioRepository
+ScenarioService -. TriggerRepository
+ScenarioService -. ActionRepository
+ScenarioService -. MessageBrokerClient
+ScenarioService -. Scenario
+ScenarioExecutor -. TriggerScheduler
+ScenarioExecutor -. Scenario
+ScenarioExecutor -. Trigger
+ScenarioExecutor -. ScenarioService
+ScenarioExecutor -. Action
+Scenario -. Trigger
+Scenario -. Action
+TriggerScheduler -. Trigger
+
+@enduml
